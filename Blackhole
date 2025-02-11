@@ -15,9 +15,9 @@ local currentTarget = nil -- Текущая цель
 local function createTool()
     local tool = Instance.new("Tool")
     tool.RequiresHandle = false
-    tool.Name = "evilions blackhole tool"
+    tool.Name = "shashlik blackhole tool"
     tool.Parent = player.Backpack
-    tool.ToolTip = "Unequip = stop bringing parts"
+    tool.ToolTip = "Unequip = unequip lol"
 
     local function moveParts(target)
         currentTarget = target -- Обновляем текущую цель
